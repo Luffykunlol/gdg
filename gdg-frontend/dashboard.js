@@ -153,7 +153,7 @@ TASK:
         <div class="text-center p-8 bg-red-50 rounded-xl border border-red-100">
             <div class="text-3xl mb-2">❌</div>
             <h3 class="text-red-800 font-bold mb-1">Analysis Failed</h3>
-            <p class="text-red-600 text-sm">AI Analysis Failed. Please check your internet connection or API key.</p>
+            <p class="text-red-600 text-sm">Error: ${error.message}</p>
         </div>
     `;
   } finally {

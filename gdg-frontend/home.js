@@ -114,7 +114,7 @@ TASK:
         resultDiv.scrollIntoView({ behavior: 'smooth' });
 
     } catch (err) {
-        alert("Sorry, there was an error checking the scam. Please try again later.");
+        alert("Error: " + err.message);
         console.error(err);
     } finally {
         checkBtn.disabled = false;
