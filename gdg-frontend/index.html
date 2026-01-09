@@ -64,7 +64,21 @@
       <label class="block text-sm font-black text-blue-800 uppercase tracking-widest mb-4">Paste the message or SMS
         here</label>
       <textarea id="scamText" rows="6" placeholder="Example: You won 5 Lakhs! Click this link to claim..."
-        class="w-full p-6 rounded-2xl bg-blue-50 border-2 border-blue-100 focus:border-blue-500 outline-none text-xl font-medium text-slate-800 resize-none mb-6"></textarea>
+        class="w-full p-6 rounded-2xl bg-blue-50 border-2 border-blue-100 focus:border-blue-500 outline-none text-xl font-medium text-slate-800 resize-none mb-4"></textarea>
+
+      <!-- Document Upload Toggle -->
+      <div class="mb-6">
+        <label class="block text-sm font-black text-blue-800 uppercase tracking-widest mb-4">OR UPLOAD DOCUMENT (PDF, IMAGE)</label>
+        <div class="relative group">
+          <input type="file" id="docFile" accept=".pdf,image/*,.txt"
+            class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onchange="updateFileName()" />
+          <div
+            class="border-4 border-dashed border-blue-100 rounded-2xl p-6 text-center group-hover:border-blue-300 group-hover:bg-blue-50 transition-all">
+            <div class="text-3xl mb-2">📄</div>
+            <p id="fileName" class="text-slate-500 font-bold">Drop file or <span class="text-blue-600">browse</span></p>
+          </div>
+        </div>
+      </div>
 
       <div class="flex flex-col md:flex-row gap-6">
         <div class="flex-grow">

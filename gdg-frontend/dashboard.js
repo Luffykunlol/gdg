@@ -34,9 +34,14 @@ function readFile(file) {
     if (file.type === "application/pdf") {
       reader.readAsDataURL(file);
       reader.onload = () => {
-        // Remove "data:application/pdf;base64," prefix
         const base64Info = reader.result.split(',')[1];
         resolve({ type: 'pdf', data: base64Info });
+      };
+    } else if (file.type.startsWith("image/")) {
+      reader.readAsDataURL(file);
+      reader.onload = () => {
+        const base64Info = reader.result.split(',')[1];
+        resolve({ type: 'image', data: base64Info });
       };
     } else {
       reader.readAsText(file);
@@ -79,13 +84,18 @@ analyzeBtn.addEventListener("click", async () => {
   try {
     const fileResult = await readFile(fileInput.files[0]);
 
-    const response = await fetch("http://localhost:5001/civic-shield/us-central1/api/analyze", {
+    // Perfect sync: Use current origin if deployed, otherwise localhost emulator
+    const BASE_URL = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+      ? "http://localhost:5001/civic-shield/us-central1/api"
+      : "/api";
+
+    const response = await fetch(`${BASE_URL}/analyze`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        fileData: fileResult.type === 'pdf' ? fileResult.data : null,
+        fileData: fileResult.type === 'pdf' || fileResult.type === 'image' ? fileResult.data : null,
         documentText: fileResult.type === 'text' ? fileResult.data : null,
-        mimeType: fileResult.type === 'pdf' ? "application/pdf" : "text/plain",
+        mimeType: fileInput.files[0].type,
         question,
         language
       })
@@ -105,7 +115,7 @@ analyzeBtn.addEventListener("click", async () => {
       riskColor = "bg-red-100 text-red-700 border-red-200";
       riskIcon = "🚨";
       identifiedRisk = "HIGH RISK";
-    } else if (textToAnalyze.includes("CAUTION") || textToAnalyze.includes("⚠️")) {
+    } else if (textToAnalyze.includes("CAUTION") || textToAnalyze.includes("⚠️") || textToAnalyze.includes("MEDIUM")) {
       riskColor = "bg-yellow-100 text-yellow-700 border-yellow-200";
       riskIcon = "⚠️";
       identifiedRisk = "CAUTION";
@@ -139,6 +149,6 @@ analyzeBtn.addEventListener("click", async () => {
     `;
   } finally {
     analyzeBtn.disabled = false;
-    analyzeBtn.innerHTML = `<span>🔍</span> Analyze Document`;
+    analyzeBtn.innerHTML = `<span>🔍</span> Run Protection Scan`;
   }
 });
