@@ -13,12 +13,21 @@ function updateFileName() {
 function readFile(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = () => {
-            const base64 = reader.result.split(',')[1];
-            resolve(base64);
-        };
+
+        // Use readAsDataURL for images and PDFs (for Gemini multimodal)
+        if (file.type.startsWith('image/') || file.type === 'application/pdf') {
+            reader.readAsDataURL(file);
+            reader.onload = () => {
+                const base64 = reader.result.split(',')[1];
+                resolve({ type: 'file', data: base64, mimeType: file.type });
+            };
+        } else {
+            // Treat as text for now (txt, docx raw etc)
+            reader.readAsText(file);
+            reader.onload = () => resolve({ type: 'text', data: reader.result });
+        }
+
         reader.onerror = reject;
-        reader.readAsDataURL(file);
     });
 }
 
@@ -50,9 +59,14 @@ async function checkScam() {
 
         if (fileInput.files.length > 0) {
             const file = fileInput.files[0];
-            const fileData = await readFile(file);
-            payload.fileData = fileData;
-            payload.mimeType = file.type;
+            const filePayload = await readFile(file);
+
+            if (filePayload.type === 'file') {
+                payload.fileData = filePayload.data;
+                payload.mimeType = filePayload.mimeType;
+            } else {
+                payload.documentText = (payload.documentText || "") + "\n\nFILE CONTENT:\n" + filePayload.data;
+            }
         }
 
         // Perfect sync: Use current origin if deployed, otherwise localhost emulator

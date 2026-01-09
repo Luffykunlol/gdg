@@ -31,17 +31,11 @@ function readFile(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
 
-    if (file.type === "application/pdf") {
+    if (file.type === "application/pdf" || file.type.startsWith("image/")) {
       reader.readAsDataURL(file);
       reader.onload = () => {
         const base64Info = reader.result.split(',')[1];
-        resolve({ type: 'pdf', data: base64Info });
-      };
-    } else if (file.type.startsWith("image/")) {
-      reader.readAsDataURL(file);
-      reader.onload = () => {
-        const base64Info = reader.result.split(',')[1];
-        resolve({ type: 'image', data: base64Info });
+        resolve({ type: 'file', data: base64Info, mimeType: file.type });
       };
     } else {
       reader.readAsText(file);
@@ -93,9 +87,9 @@ analyzeBtn.addEventListener("click", async () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        fileData: fileResult.type === 'pdf' || fileResult.type === 'image' ? fileResult.data : null,
+        fileData: fileResult.type === 'file' ? fileResult.data : null,
         documentText: fileResult.type === 'text' ? fileResult.data : null,
-        mimeType: fileInput.files[0].type,
+        mimeType: fileResult.type === 'file' ? fileResult.mimeType : null,
         question,
         language
       })

@@ -66,19 +66,20 @@
       <textarea id="scamText" rows="6" placeholder="Example: You won 5 Lakhs! Click this link to claim..."
         class="w-full p-6 rounded-2xl bg-blue-50 border-2 border-blue-100 focus:border-blue-500 outline-none text-xl font-medium text-slate-800 resize-none mb-4"></textarea>
 
-      <!-- Document Upload Toggle -->
-      <div class="mb-6">
-        <label class="block text-sm font-black text-blue-800 uppercase tracking-widest mb-4">OR UPLOAD DOCUMENT (PDF, IMAGE)</label>
-        <div class="relative group">
-          <input type="file" id="docFile" accept=".pdf,image/*,.txt"
-            class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onchange="updateFileName()" />
-          <div
-            class="border-4 border-dashed border-blue-100 rounded-2xl p-6 text-center group-hover:border-blue-300 group-hover:bg-blue-50 transition-all">
-            <div class="text-3xl mb-2">📄</div>
-            <p id="fileName" class="text-slate-500 font-bold">Drop file or <span class="text-blue-600">browse</span></p>
-          </div>
+      <!-- NEW Document Upload Section -->
+      <div id="uploadContainer" class="mb-8">
+        <label class="block text-sm font-black text-blue-800 uppercase tracking-widest mb-4">Or Upload a Document (PDF,
+          Image, Word)</label>
+        <div
+          class="relative group border-4 border-dashed border-blue-200 rounded-2xl p-8 text-center transition-all hover:bg-blue-50 hover:border-blue-400 cursor-pointer"
+          onclick="document.getElementById('docFile').click()">
+          <input type="file" id="docFile" accept=".pdf,image/*,.docx,.txt" class="hidden" onchange="updateFileName()" />
+          <div class="text-5xl mb-3">📁</div>
+          <p id="fileName" class="text-xl font-bold text-slate-600">Click to upload or drag & drop</p>
+          <p class="text-sm text-slate-400 mt-2 font-bold uppercase tracking-wider">Supports PDF, JPG, PNG, DOCX</p>
         </div>
       </div>
+
 
       <div class="flex flex-col md:flex-row gap-6">
         <div class="flex-grow">
