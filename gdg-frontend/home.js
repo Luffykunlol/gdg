@@ -1,4 +1,9 @@
-function updateFileName() {
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+const API_KEY = "AIzaSyCUBxO9Ha2Fp4t9A1sFE6G-7VAOiSAwPWE";
+const genAI = new GoogleGenerativeAI(API_KEY);
+
+window.updateFileName = function updateFileName() {
     const fileInput = document.getElementById('docFile');
     const fileNameDisplay = document.getElementById('fileName');
     if (fileInput.files.length > 0) {
@@ -22,7 +27,7 @@ function readFile(file) {
                 resolve({ type: 'file', data: base64, mimeType: file.type });
             };
         } else {
-            // Treat as text for now (txt, docx raw etc)
+            // Treat as text for now
             reader.readAsText(file);
             reader.onload = () => resolve({ type: 'text', data: reader.result });
         }
@@ -31,7 +36,7 @@ function readFile(file) {
     });
 }
 
-async function checkScam() {
+window.checkScam = async function checkScam() {
     const textInput = document.getElementById('scamText').value;
     const fileInput = document.getElementById('docFile');
     const language = document.getElementById('language').value;
@@ -51,43 +56,49 @@ async function checkScam() {
     checkBtn.textContent = "Checking...";
 
     try {
-        let payload = {
-            question: textInput || "Analyze this for potential scams or fraud.",
-            language: language,
-            documentText: textInput
-        };
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+        let promptContent = [];
+        let documentText = textInput || "";
 
         if (fileInput.files.length > 0) {
             const file = fileInput.files[0];
             const filePayload = await readFile(file);
 
             if (filePayload.type === 'file') {
-                payload.fileData = filePayload.data;
-                payload.mimeType = filePayload.mimeType;
+                promptContent.push({
+                    inlineData: {
+                        data: filePayload.data,
+                        mimeType: filePayload.mimeType
+                    }
+                });
             } else {
-                payload.documentText = (payload.documentText || "") + "\n\nFILE CONTENT:\n" + filePayload.data;
+                documentText += "\n\nFILE CONTENT:\n" + filePayload.data;
             }
         }
 
-        // Perfect sync: Use current origin if deployed, otherwise localhost emulator
-        const BASE_URL = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
-            ? "http://localhost:5001/civic-shield/us-central1/api"
-            : "/api"; // When deployed to Firebase, we use rewrites
+        const fullPrompt = `
+You are Civic Shield AI helping Indian citizens.
 
-        const response = await fetch(`${BASE_URL}/analyze`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-        });
+${documentText ? `DOCUMENT CONTENT:\n${documentText}\n` : ""}
 
-        const data = await response.json();
-        const apiResponse = data.answer;
+TASK:
+1. Explain what the document or message is about
+2. Detect fraud or risk (LOW / MEDIUM / HIGH)
+3. Give step-by-step advice
+4. Respond in ${language || "English"}
+`;
+
+        promptContent.unshift(fullPrompt);
+
+        const result = await model.generateContent(promptContent);
+        const apiResponse = result.response.text();
 
         // Display Result
         resultDiv.classList.remove('hidden');
         resultText.textContent = apiResponse;
 
-        // Coloring Logic (Phase 4 & 5 Compliance)
+        // Coloring Logic
         resultCard.classList.remove('border-red-500', 'bg-red-50', 'border-green-500', 'bg-green-50', 'border-yellow-500', 'bg-yellow-50');
 
         const upperResponse = apiResponse.toUpperCase();

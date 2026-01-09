@@ -3,6 +3,10 @@ import {
   onAuthStateChanged,
   signOut
 } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-auth.js";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+
+const API_KEY = "AIzaSyCUBxO9Ha2Fp4t9A1sFE6G-7VAOiSAwPWE";
+const genAI = new GoogleGenerativeAI(API_KEY);
 
 const welcome = document.getElementById("welcome");
 const logoutBtn = document.getElementById("logoutBtn");
@@ -52,13 +56,8 @@ analyzeBtn.addEventListener("click", async () => {
   const question = document.getElementById("userQuestion").value;
   const language = document.getElementById("language").value;
 
-  if (fileInput.files.length === 0) {
-    alert("📄 Please upload a document (.txt or .pdf)");
-    return;
-  }
-
-  if (!question.trim()) {
-    alert("❓ Please ask a question");
+  if (fileInput.files.length === 0 && !question.trim()) {
+    alert("📄 Please upload a document or ask a question");
     return;
   }
 
@@ -76,31 +75,47 @@ analyzeBtn.addEventListener("click", async () => {
   `;
 
   try {
-    const fileResult = await readFile(fileInput.files[0]);
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-    // Perfect sync: Use current origin if deployed, otherwise localhost emulator
-    const BASE_URL = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
-      ? "http://localhost:5001/civic-shield/us-central1/api"
-      : "/api";
+    let promptContent = [];
+    let documentText = "";
 
-    const response = await fetch(`${BASE_URL}/analyze`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        fileData: fileResult.type === 'file' ? fileResult.data : null,
-        documentText: fileResult.type === 'text' ? fileResult.data : null,
-        mimeType: fileResult.type === 'file' ? fileResult.mimeType : null,
-        question,
-        language
-      })
-    });
+    if (fileInput.files.length > 0) {
+      const fileResult = await readFile(fileInput.files[0]);
+      if (fileResult.type === 'file') {
+        promptContent.push({
+          inlineData: {
+            data: fileResult.data,
+            mimeType: fileResult.mimeType
+          }
+        });
+      } else {
+        documentText = "\n\nFILE CONTENT:\n" + fileResult.data;
+      }
+    }
 
-    if (!response.ok) throw new Error("Server error");
+    const fullPrompt = `
+You are Civic Shield AI helping Indian citizens.
 
-    const data = await response.json();
+${documentText ? `DOCUMENT CONTENT:\n${documentText}\n` : ""}
+QUESTION:
+${question || "Analyze this for potential scams or fraud."}
+
+TASK:
+1. Explain what the document or message is about
+2. Answer the user's question clearly
+3. Detect fraud or risk (LOW / MEDIUM / HIGH)
+4. Give step-by-step advice
+5. Respond in ${language || "English"}
+`;
+
+    promptContent.unshift(fullPrompt);
+
+    const result = await model.generateContent(promptContent);
+    const apiResponse = result.response.text();
 
     // Determine Risk Color - Improved detection
-    const textToAnalyze = data.answer.toUpperCase();
+    const textToAnalyze = apiResponse.toUpperCase();
     let riskColor = "bg-green-100 text-green-700 border-green-200";
     let riskIcon = "✅";
     let identifiedRisk = "SAFE";
@@ -127,7 +142,7 @@ analyzeBtn.addEventListener("click", async () => {
         </div>
 
         <div class="prose prose-slate max-w-none">
-           <div class="text-slate-700 leading-relaxed whitespace-pre-wrap bg-slate-50/50 p-6 rounded-2xl border border-slate-100 shadow-sm">${data.answer}</div>
+           <div class="text-slate-700 leading-relaxed whitespace-pre-wrap bg-slate-50/50 p-6 rounded-2xl border border-slate-100 shadow-sm">${apiResponse}</div>
         </div>
       </div>
     `;
@@ -138,7 +153,7 @@ analyzeBtn.addEventListener("click", async () => {
         <div class="text-center p-8 bg-red-50 rounded-xl border border-red-100">
             <div class="text-3xl mb-2">❌</div>
             <h3 class="text-red-800 font-bold mb-1">Analysis Failed</h3>
-            <p class="text-red-600 text-sm">Could not connect to the AI server. Is the backend running?</p>
+            <p class="text-red-600 text-sm">AI Analysis Failed. Please check your internet connection or API key.</p>
         </div>
     `;
   } finally {
