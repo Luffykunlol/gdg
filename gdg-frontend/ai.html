@@ -1,54 +1,75 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8" />
-  <title>Civic Shield AI</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Civic Shield - AI Lab</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="global-ai.css">
 </head>
-<body class="bg-gray-100 p-10">
 
-  <div class="max-w-xl mx-auto bg-white p-6 rounded shadow">
-    <h1 class="text-2xl font-bold mb-4">Civic Shield – AI Analyzer</h1>
+<body class="min-h-screen flex items-center justify-center p-6 bg-slate-100">
 
-    <textarea
-      id="prompt"
-      class="w-full border p-2 rounded"
-      rows="4"
-      placeholder="Enter civic issue / complaint..."
-    ></textarea>
+  <div class="max-w-3xl w-full glass-card rounded-[3rem] p-12 shadow-2xl">
+    <div class="mb-10 text-center">
+      <div class="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-6 shadow-xl">
+        🛡️</div>
+      <h1 class="text-4xl font-black text-slate-900 mb-2">AI <span class="text-vibrant">Intelligence Lab</span></h1>
+      <p class="text-slate-500 font-bold">Direct neural interface for document & fraud analysis.</p>
+    </div>
 
-    <button
-      onclick="analyze()"
-      class="mt-4 bg-blue-600 text-white px-4 py-2 rounded"
-    >
-      Analyze with Gemini
-    </button>
+    <div class="space-y-6">
+      <textarea id="prompt" rows="6" placeholder="Paste text or describe a suspected fraud attempt here..."
+        class="w-full px-8 py-6 rounded-3xl bg-white/60 border border-slate-200 focus:ring-4 focus:ring-indigo-100 outline-none transition font-semibold text-slate-800 text-lg resize-none"></textarea>
 
-      <div class="bg-white p-8 rounded-xl shadow max-w-xl w-full">
+      <button id="analyzeBtn" onclick="analyze()"
+        class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-6 rounded-3xl shadow-2xl shadow-indigo-100 transition transform active:scale-[0.98] text-xl uppercase tracking-widest glow-pulse">
+        RUN NEURAL SCAN
+      </button>
 
-
-    <pre
-      id="output"
-      class="mt-4 bg-gray-100 p-3 rounded whitespace-pre-wrap"
-    ></pre>
+      <div id="resultContainer" class="hidden animate-fade-in mt-10">
+        <label class="block text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Scan Results</label>
+        <div id="output"
+          class="bg-white/80 p-8 rounded-[2rem] border border-white font-medium text-slate-700 leading-relaxed whitespace-pre-wrap shadow-inner overflow-y-auto max-h-[400px]">
+        </div>
+      </div>
+    </div>
   </div>
 
   <script>
     async function analyze() {
       const prompt = document.getElementById("prompt").value;
+      const output = document.getElementById("output");
+      const btn = document.getElementById("analyzeBtn");
+      const container = document.getElementById("resultContainer");
 
-      const res = await fetch("http://localhost:5000/analyze", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ prompt })
-      });
+      if (!prompt.trim()) return alert("Please enter text to analyze.");
 
-      const data = await res.json();
-      document.getElementById("output").innerText = data.response;
+      btn.disabled = true;
+      btn.innerText = "SCANNING...";
+      container.classList.add('hidden');
+
+      try {
+        const res = await fetch("http://localhost:5001/civic-shield/us-central1/api/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question: prompt, language: "English", documentText: prompt })
+        });
+
+        const data = await res.json();
+        output.innerText = data.answer || data.response || "No response details available.";
+        container.classList.remove('hidden');
+      } catch (err) {
+        output.innerText = "Error: Could not reach the AI server. Is the emulator running?";
+        container.classList.remove('hidden');
+      } finally {
+        btn.disabled = false;
+        btn.innerText = "RUN NEURAL SCAN";
+      }
     }
   </script>
-
 </body>
+
 </html>

@@ -8,6 +8,17 @@ app.use(cors({ origin: true }));
 app.use(express.json());
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const SELECTED_MODEL = process.env.GEMINI_MODEL || 'gemini-pro';
+
+function normalizeRisk(text) {
+  if (!text) return 'LOW';
+  const t = text.toLowerCase();
+  if (t.includes('high risk') || t.includes('fraud') || t.includes('immediate payment') || t.includes('transfer money') || t.includes('urgent')) return 'HIGH';
+  if (t.includes('medium') || t.includes('caution') || t.includes('verify') || t.includes('suspicious')) return 'MEDIUM';
+  if (t.includes('low') || t.includes('safe') || t.includes('no risk') ) return 'LOW';
+  // default to LOW when unclear
+  return 'LOW';
+}
 
 app.post("/analyze", async (req, res) => {
   try {
@@ -34,20 +45,37 @@ TASK:
 5. Respond in ${language || "English"}
 `;
 
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-    const result = await model.generateContent(fullPrompt);
-    const text = result.response.text();
+    try {
+      const model = genAI.getGenerativeModel({ model: SELECTED_MODEL });
+      const result = await model.generateContent(fullPrompt);
+      const text = result.response.text();
 
-    res.json({
-      summary: "Document analyzed successfully.",
-      answer: text,
-      risk: "LOW",
-      actions: [
-        "Keep the document safely",
-        "Do not share OTP or personal details",
-        "Verify with official sources if unsure"
-      ]
-    });
+      // Derive a simple risk label from the model output to keep frontend mapping stable
+      const risk = normalizeRisk(text);
+
+      res.json({
+        summary: "Document analyzed successfully.",
+        answer: text,
+        risk: risk,
+        actions: [
+          "Keep the document safely",
+          "Do not share OTP or personal details",
+          "Verify with official sources if unsure"
+        ]
+      });
+    } catch (err) {
+      console.error('Live model error:', err);
+      res.json({
+        summary: "Analysis unavailable (model error)",
+        answer: "The analysis service failed. Try again later or check function logs.",
+        risk: "MEDIUM",
+        actions: [
+          "Keep the document safely",
+          "Do not share OTP or personal details",
+          "Verify with official sources if unsure"
+        ]
+      });
+    }
 
   } catch (err) {
     console.error(err);

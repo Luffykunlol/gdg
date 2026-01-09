@@ -30,7 +30,7 @@ logoutBtn.addEventListener("click", () => {
 function readFile(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    
+
     if (file.type === "application/pdf") {
       reader.readAsDataURL(file);
       reader.onload = () => {
@@ -42,7 +42,7 @@ function readFile(file) {
       reader.readAsText(file);
       reader.onload = () => resolve({ type: 'text', data: reader.result });
     }
-    
+
     reader.onerror = reject;
   });
 }
@@ -79,7 +79,7 @@ analyzeBtn.addEventListener("click", async () => {
   try {
     const fileResult = await readFile(fileInput.files[0]);
 
-    const response = await fetch("http://localhost:5000/analyze", {
+    const response = await fetch("http://localhost:5001/civic-shield/us-central1/api/analyze", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -95,48 +95,35 @@ analyzeBtn.addEventListener("click", async () => {
 
     const data = await response.json();
 
-    // Determine Risk Color
+    // Determine Risk Color - Improved detection
+    const textToAnalyze = data.answer.toUpperCase();
     let riskColor = "bg-green-100 text-green-700 border-green-200";
     let riskIcon = "✅";
-    if (data.risk === "MEDIUM") {
-        riskColor = "bg-yellow-100 text-yellow-700 border-yellow-200";
-        riskIcon = "⚠️";
-    } else if (data.risk === "HIGH" || data.risk === "HIGH RISK") {
-        riskColor = "bg-red-100 text-red-700 border-red-200";
-        riskIcon = "🚨";
+    let identifiedRisk = "SAFE";
+
+    if (textToAnalyze.includes("HIGH RISK") || textToAnalyze.includes("SCAM") || textToAnalyze.includes("🚨")) {
+      riskColor = "bg-red-100 text-red-700 border-red-200";
+      riskIcon = "🚨";
+      identifiedRisk = "HIGH RISK";
+    } else if (textToAnalyze.includes("CAUTION") || textToAnalyze.includes("⚠️")) {
+      riskColor = "bg-yellow-100 text-yellow-700 border-yellow-200";
+      riskIcon = "⚠️";
+      identifiedRisk = "CAUTION";
     }
 
     resultDiv.innerHTML = `
       <div class="space-y-6 animate-fade-in">
         
-        <!-- Verdict -->
+        <!-- Verdict Badge -->
         <div class="flex items-center justify-between">
              <h3 class="text-sm font-bold text-slate-500 uppercase tracking-wider">Safety Verdict</h3>
-             <span class="px-4 py-1.5 rounded-full text-sm font-bold border ${riskColor} flex items-center gap-2">
-                ${riskIcon} ${data.risk}
+             <span class="px-4 py-1.5 rounded-full text-sm font-bold border ${riskColor} flex items-center gap-2 uppercase">
+                ${riskIcon} ${identifiedRisk}
              </span>
         </div>
 
-        <div>
-           <h3 class="text-lg font-semibold text-slate-800 mb-2">📄 Summary</h3>
-           <p class="text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-xl border border-slate-100">${data.summary}</p>
-        </div>
-
-        <div>
-           <h3 class="text-lg font-semibold text-slate-800 mb-2">❓ Answer</h3>
-           <p class="text-slate-600 leading-relaxed whitespace-pre-wrap">${data.answer}</p>
-        </div>
-
-        <div>
-           <h3 class="text-lg font-semibold text-slate-800 mb-2">✅ Action Plan</h3>
-           <ul class="space-y-3">
-             ${data.actions.map(a => `
-                <li class="flex items-start gap-3 text-slate-700 bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
-                    <span class="text-indigo-600 mt-0.5">•</span>
-                    <span>${a}</span>
-                </li>
-             `).join("")}
-           </ul>
+        <div class="prose prose-slate max-w-none">
+           <div class="text-slate-700 leading-relaxed whitespace-pre-wrap bg-slate-50/50 p-6 rounded-2xl border border-slate-100 shadow-sm">${data.answer}</div>
         </div>
       </div>
     `;
