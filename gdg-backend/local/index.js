@@ -7,72 +7,103 @@ dotenv.config();
 
 const app = express();
 app.use(cors());
-app.use(express.json());
+// increase limit for PDF base64 uploads
+app.use(express.json({ limit: "20mb" }));
 
+// Initialize Gemini
+if (!process.env.GEMINI_API_KEY) {
+  console.error("❌ GEMINI_API_KEY is missing from environment variables.");
+}
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-/* ---------------- TEST ---------------- */
-app.get("/", (req, res) => {
-  res.send("Civic Shield backend running with Gemini ✅");
-});
-
-/* ---------------- ANALYZE ---------------- */
+/* ---------------- ANALYSIS ENDPOINT ---------------- */
 app.post("/analyze", async (req, res) => {
   try {
-    const { documentText, question, language } = req.body;
+    const { documentText, fileData, mimeType, question, language } = req.body;
 
-    if (!documentText || !question) {
-      return res.status(400).json({ error: "Missing input" });
+    if (!question) {
+      return res.status(400).json({ error: "Missing question" });
     }
 
-    const prompt = `
-You are Civic Shield AI.
+    if (!documentText && !fileData) {
+      return res.status(400).json({ error: "Missing document content" });
+    }
 
-DOCUMENT:
-${documentText}
+    // Role & Safety Protocol
+    const systemInstruction = `
+You are Civic Shield, an AI assistant dedicated to protecting ordinary citizens from fraud, scams, and bureaucracy.
 
-USER QUESTION:
-${question}
+CORE SAFETY PROTOCOL:
+1. SCAN: Analyze the input for high-risk keywords (OTP, Aadhaar, Urgent Payment, Lottery, Click this link).
+2. VERDICT: Classify the situation immediately as one of:
+   - "SAFE": Normal civic documents, routine delays, standard forms.
+   - "CAUTION": Unfamiliar requests, mild irregularities.
+   - "HIGH RISK": Requests for money/OTP, urgency, threats, unofficial links.
+3. SIMPLIFY: Explain the content in extremely simple, non-legalistic language (ELI5).
+4. DIRECT: Provide a numbered list of concrete actions.
 
-INSTRUCTIONS:
-1. Summarize the document
-2. Answer the user's question clearly
-3. Identify any fraud or risk
-4. Provide step-by-step advice
-5. Use simple language
-6. Respond in ${language || "English"}
+OUTPUT FORMAT (JSON ONLY):
+{
+  "summary": "One sentence summary of what this is.",
+  "answer": "Clear answer to the user's specific question.",
+  "risk": "SAFE" | "CAUTION" | "HIGH RISK",
+  "actions": ["Step 1", "Step 2", "Step 3"]
+}
 
-FORMAT RESPONSE AS JSON WITH:
-summary
-answer
-risk (LOW / MEDIUM / HIGH)
-actions (array of steps)
+RESPONSE LANGUAGE:
+Respond strictly in ${language || "English"}.
 `;
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-    const result = await model.generateContent(prompt);
-    const text = result.response.text();
+    // Construct the model parts
+    const parts = [];
 
-    // 🔴 SAFETY: Gemini returns text, so we map manually
-    res.json({
-      summary: "Document analyzed successfully.",
-      answer: text,
-      risk: "LOW",
-      actions: [
-        "Read the document carefully",
-        "Do not share personal details",
-        "Verify with official sources if unsure"
-      ]
+    // Add file data (PDF) if present
+    if (fileData) {
+      parts.push({
+        inlineData: {
+          data: fileData,
+          mimeType: mimeType || "application/pdf",
+        },
+      });
+    }
+
+    // Add text data if present (mutually exclusive usually, but handled)
+    if (documentText) {
+      parts.push({ text: `DOCUMENT CONTENT:\n${documentText}` });
+    }
+
+    // Add User Question
+    parts.push({ text: `USER QUESTION:\n${question}` });
+
+    // Generate
+    const model = genAI.getGenerativeModel({
+      model: "gemini-1.5-flash",
+      systemInstruction: systemInstruction
     });
 
+    const result = await model.generateContent({
+      contents: [{ role: "user", parts: parts }],
+      generationConfig: {
+        responseMimeType: "application/json"
+      }
+    });
+
+    const outputText = result.response.text();
+    const jsonResponse = JSON.parse(outputText);
+
+    res.json(jsonResponse);
+
   } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: "Gemini analysis failed" });
+    console.error("Analysis Error:", err);
+    res.status(500).json({
+      error: "Analysis failed",
+      details: err.message
+    });
   }
 });
 
-/* ---------------- START SERVER ---------------- */
+/* ---------------- START ---------------- */
 const PORT = 5000;
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`🛡️ Civic Shield Backend running on http://localhost:${PORT}`);
 });
