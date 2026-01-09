@@ -83,10 +83,11 @@ You are Civic Shield AI helping Indian citizens.
 ${documentText ? `DOCUMENT CONTENT:\n${documentText}\n` : ""}
 
 TASK:
-1. Explain what the document or message is about
-2. Detect fraud or risk (LOW / MEDIUM / HIGH)
-3. Give step-by-step advice
-4. Respond in ${language || "English"}
+1. Analyze the input (text or document) deeply for fraud indicators.
+2. Start with a clear verdict: "VERDICT: SAFE", "VERDICT: CAUTION", or "VERDICT: HIGH RISK (SCAM)".
+3. Explain clearly WHY it is safe or a scam.
+4. Give checking advice.
+5. Respond in ${language || "English"}
 `;
 
         promptContent.unshift(fullPrompt);

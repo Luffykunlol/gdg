@@ -102,10 +102,10 @@ QUESTION:
 ${question || "Analyze this for potential scams or fraud."}
 
 TASK:
-1. Explain what the document or message is about
-2. Answer the user's question clearly
-3. Detect fraud or risk (LOW / MEDIUM / HIGH)
-4. Give step-by-step advice
+1. Analyze the input (text or document) deeply.
+2. Start with a clear verdict: "VERDICT: SAFE", "VERDICT: CAUTION", or "VERDICT: HIGH RISK (SCAM)".
+3. Answer the user's question.
+4. Explain the verdict.
 5. Respond in ${language || "English"}
 `;
 
