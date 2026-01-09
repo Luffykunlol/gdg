@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Civic Shield AI</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-10">
+
+  <div class="max-w-xl mx-auto bg-white p-6 rounded shadow">
+    <h1 class="text-2xl font-bold mb-4">Civic Shield – AI Analyzer</h1>
+
+    <textarea
+      id="prompt"
+      class="w-full border p-2 rounded"
+      rows="4"
+      placeholder="Enter civic issue / complaint..."
+    ></textarea>
+
+    <button
+      onclick="analyze()"
+      class="mt-4 bg-blue-600 text-white px-4 py-2 rounded"
+    >
+      Analyze with Gemini
+    </button>
+
+      <div class="bg-white p-8 rounded-xl shadow max-w-xl w-full">
+
+
+    <pre
+      id="output"
+      class="mt-4 bg-gray-100 p-3 rounded whitespace-pre-wrap"
+    ></pre>
+  </div>
+
+  <script>
+    async function analyze() {
+      const prompt = document.getElementById("prompt").value;
+
+      const res = await fetch("http://localhost:5000/analyze", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ prompt })
+      });
+
+      const data = await res.json();
+      document.getElementById("output").innerText = data.response;
+    }
+  </script>
+
+</body>
+</html>
